@@ -26,18 +26,14 @@ namespace MazeGeneratorAndSolver
             while (stack.Count > 0)
             {
                 var current = stack.Pop();
-                if (!current.IsVisited)
+
+                var neighbors = PointsToCells(GetCurrentCellNeighbours(current));
+                if (neighbors.Count > 0)
                 {
-                    current.IsVisited = true;
-                    var neighbors = PointsToCells(GetCurrentCellNeighbours(current));
-                    while (neighbors.Count > 0)
-                    {
-                        var next = GetRandom(neighbors);
-                        RemoveWall(current, next);
-                        neighbors.Remove(next);
-                        stack.Push(current);
-                        stack.Push(next);
-                    }
+                    var next = GetRandom(neighbors);
+                    RemoveWall(current, next);
+                    stack.Push(current);
+                    stack.Push(next);
                 }
             }
             MakeMazeBeginEnd();
@@ -153,9 +149,62 @@ namespace MazeGeneratorAndSolver
         public bool BreadthFirstSearch()
         {
             // Implement Breadth First Search here
+            var queue = new Queue<Cell>();
+            queue.Enqueue(_maze.Begin);
 
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                current.IsVisited = true;
+                var adjencents = PointsToCells(AdjacentCells(current));
+                if (adjencents.Count > 0)
+                {
+                    foreach (var cell in adjencents)
+                    {
+                        if (!cell.IsVisited)
+                        {
+                            cell.PreviousCell = current;
+                            queue.Enqueue(cell);
+                            if (_maze.End.Position == cell.Position)
+                            {
+                                ShowFoundPath(cell);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
             return true;
 
+        }
+
+        List<Point> AdjacentCells(Cell cell)
+        {
+            var list = new List<Point>();
+            var tempPos = cell.Position;
+            tempPos.X = cell.Position.X - 1;
+            if (tempPos.X >= 0 && !cell.CellWalls[0])
+            {
+                list.Add(tempPos);
+            }
+            tempPos.X = cell.Position.X + 1;
+            if (tempPos.X < _maze.Width && !cell.CellWalls[2])
+            {
+                list.Add(tempPos);
+            }
+            tempPos = cell.Position;
+            tempPos.Y = cell.Position.Y - 1;
+            if (tempPos.Y >= 0 && !cell.CellWalls[1])
+            {
+                list.Add(tempPos);
+            }
+            tempPos.Y = cell.Position.Y + 1;
+            if (tempPos.Y < _maze.Height && !cell.CellWalls[3])
+            {
+                list.Add(tempPos);
+            }
+
+            return list;
         }
 
         private void ShowFoundPath(Cell cell)
