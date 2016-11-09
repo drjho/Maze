@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -156,7 +157,10 @@ namespace MazeGeneratorAndSolver
             {
                 var current = queue.Dequeue();
                 current.IsVisited = true;
-                var adjencents = PointsToCells(AdjacentCells(current));
+
+                Thread.Sleep(30);
+
+                var adjencents = PointsToCells(GetAdjacentPoints(current));
                 if (adjencents.Count > 0)
                 {
                     foreach (var cell in adjencents)
@@ -168,6 +172,7 @@ namespace MazeGeneratorAndSolver
                             if (_maze.End.Position == cell.Position)
                             {
                                 ShowFoundPath(cell);
+                                queue.Clear();
                                 break;
                             }
                         }
@@ -178,7 +183,7 @@ namespace MazeGeneratorAndSolver
 
         }
 
-        List<Point> AdjacentCells(Cell cell)
+        List<Point> GetAdjacentPoints(Cell cell)
         {
             var list = new List<Point>();
             var tempPos = cell.Position;
@@ -220,5 +225,145 @@ namespace MazeGeneratorAndSolver
 
         #endregion Breadth-First Search
 
+
+        #region A*
+
+        private void ShowFoundPath(Node node)
+        {
+            var path = new List<Node>();
+            while (node != null)
+            {
+                path.Add(node);
+                node = node.Parent;
+            }
+            _maze.FoundPath = path.Select(p => _maze.MazeArray[p.X, p.Y]).ToList();
+        }
+
+        public bool AStarSearch()
+        {
+            var goal = new Node(_maze.End);
+            var start = new Node(_maze.Begin);
+            var openList = new SortedDictionary<Node, float>();
+            openList.Add(start, 0);
+            var closeList = new Dictionary<Node, float>();
+
+            while (openList.Count > 0)
+            {
+                var q = openList.First().Key;
+                openList.Remove(q);
+
+                _maze.MazeArray[q.X, q.Y].IsVisited = true;
+
+                Thread.Sleep(20);
+
+                var successors = GetAdjacentNodes(q);
+                foreach (var s in successors)
+                {
+                    s.Parent = q;
+                    if (s.Equals(goal))
+                    {
+                        ShowFoundPath(s);
+                        return true;
+                    }
+                    s.G = q.G + Node.Distance(q, s);
+                    s.H = Node.Distance(goal, s);
+                    s.F = s.G + s.H;
+
+                    if (openList.ContainsKey(s) && openList[s] < s.F)
+                        continue;
+                    if (closeList.ContainsKey(s) && closeList[s] < s.F)
+                        continue;
+                    openList[s] = s.F;
+                }
+                closeList[q] = q.F;
+            }
+            return false;
+        }
+
+        private List<Node> GetAdjacentNodes(Node node)
+        {
+            var points = GetAdjacentPoints(_maze.MazeArray[node.X, node.Y]);
+            return points.Select(p => new Node(p)).ToList();
+        }
+
+        private List<Node> GetEightAdjacents(Node node)
+        {
+            var list = new List<Node>();
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    var tempPoint = new Point(node.X + x, node.Y + y);
+                    if (tempPoint.X >= 0 && tempPoint.X < _maze.Width
+                        && tempPoint.Y >= 0 && tempPoint.Y < _maze.Height)
+                    {
+                        list.Add(new Node(tempPoint));
+                    }
+                }
+            }
+            return list;
+        }
+
+        #endregion A*
+    }
+
+    public class Node : IComparable<Node>
+    {
+        public Node Parent { get; set; } = null;
+        public Point Position { get; set; }
+        public int X => Position.X;
+        public int Y => Position.Y;
+        public float F { get; set; }
+        public float G { get; set; }
+        public float H { get; set; }
+
+        public Node()
+        {
+
+        }
+
+        public Node(int x, int y) : this(new Point(x, y))
+        {
+
+        }
+
+        public Node(Point point)
+        {
+            Position = point;
+        }
+
+        public Node(Cell cell) : this(cell.Position)
+        {
+        }
+
+        public static float Distance(Node a, Node b)
+        {
+            return (float)Math.Sqrt(Math.Pow(a.Position.X - b.Position.X, 2)
+                + Math.Pow(a.Position.Y - b.Position.Y, 2));
+        }
+
+        public static int CompareF(Node x, Node y)
+        {
+            return y.F.CompareTo(x.F);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is Node)
+            {
+                return this.Position == ((Node)obj).Position;
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return Position.GetHashCode();
+        }
+
+        public int CompareTo(Node other)
+        {
+            return CompareF(this, other);
+        }
     }
 }

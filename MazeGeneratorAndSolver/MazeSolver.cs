@@ -22,7 +22,8 @@ namespace MazeGeneratorAndSolver
             _maze.FoundPath.Clear();
             this.unvisitAll();
             SearchAlgorithm algo = new SearchAlgorithm(_maze);
-            algo.BreadthFirstSearch();
+            //algo.BreadthFirstSearch();
+            algo.AStarSearch();
             _maze.Solving = false;
         }
 
